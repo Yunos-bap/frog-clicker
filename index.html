@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Frog Clicker: Hat Update</title>
+    <title>Frog Clicker: Hat & Achievement Fix</title>
     <style>
         :root { --grass: #7cfc00; --wood: #5d4037; --ui: rgba(0,0,0,0.92); --machine: #ff4757; }
-        body { margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; background: #2c3e50; color: white; overflow: hidden; touch-action: none; }
+        body { margin: 0; padding: 0; font-family: sans-serif; background: #2c3e50; color: white; overflow: hidden; touch-action: none; }
 
         #game-screen { position: absolute; width: 100vw; height: 100vh; background: var(--grass); display: block; }
 
-        /* Merge Machine */
         #merge-zone {
             position: absolute; left: 60%; top: 50%; transform: translate(-50%, -50%);
             width: 300px; height: 300px; border: 6px dashed var(--machine); border-radius: 40px;
@@ -18,7 +17,6 @@
             font-weight: bold; color: white; font-size: 20px; z-index: 1; pointer-events: none;
         }
 
-        /* Frosken */
         .frog {
             position: absolute; width: 120px; height: 120px;
             font-size: 80px; display: flex; align-items: center; justify-content: center;
@@ -27,25 +25,26 @@
         }
         .lvl-tag { position: absolute; bottom: 5px; right: 5px; font-size: 16px; background: black; color: gold; padding: 2px 8px; border-radius: 10px; pointer-events: none; }
 
-        /* Sidebar */
         #sidebar { 
             position: absolute; left: 0; top: 0; width: 280px; height: 100%; 
             background: var(--ui); border-right: 5px solid var(--wood); z-index: 100; 
             display: flex; flex-direction: column; 
         }
         .tabs { display: flex; height: 50px; background: var(--wood); }
-        .tab-btn { flex: 1; border: none; background: transparent; color: #ccc; font-weight: bold; font-size: 12px; cursor: pointer; }
+        .tab-btn { flex: 1; border: none; background: transparent; color: #ccc; font-weight: bold; font-size: 10px; cursor: pointer; }
         .tab-btn.active { background: #8d6e63; color: white; }
 
         .content { flex: 1; overflow-y: auto; padding: 15px; display: none; }
         
-        /* UI Elementer */
         .section-header { color: #f1c40f; text-transform: uppercase; font-size: 12px; margin: 15px 0 8px 0; border-bottom: 1px solid #444; padding-bottom: 5px; }
         .item { background: #222; padding: 12px; margin-bottom: 8px; border-radius: 8px; border-left: 4px solid #f1c40f; font-size: 14px; cursor: pointer; }
         
         .log-entry { padding: 8px; margin-bottom: 4px; border-radius: 4px; background: rgba(255,255,255,0.05); font-size: 14px; }
         .unlocked { color: #2ecc71; font-weight: bold; border-left: 3px solid #2ecc71; }
         .locked { color: #555; font-style: italic; }
+
+        .achievement { background: #1a1a1a; padding: 10px; margin-bottom: 8px; border-radius: 8px; border: 1px solid #444; font-size: 13px; }
+        .ach-done { border-color: #2ecc71; background: #0e2b1a; }
 
         #stats-panel { position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.8); padding: 10px 25px; border-radius: 50px; font-size: 24px; z-index: 110; border: 2px solid #f1c40f; }
     </style>
@@ -60,13 +59,12 @@
             <div class="tabs">
                 <button id="btn-shop" class="tab-btn active" onclick="showTab('shop')">SHOP</button>
                 <button id="btn-log" class="tab-btn" onclick="showTab('log')">LOG</button>
-                <button id="btn-ach" class="tab-btn" onclick="showTab('ach')">ACHIV</button>
+                <button id="btn-ach" class="tab-btn" onclick="showTab('ach')">ACHIEVEMENTS</button>
             </div>
             
             <div id="tab-shop" class="content" style="display: block;">
                 <div class="section-header">Frogs</div>
                 <div id="shop-frogs"></div>
-
                 <div class="section-header">Hat Hangar</div>
                 <div id="shop-hats"></div>
             </div>
@@ -74,8 +72,7 @@
             <div id="tab-log" class="content">
                 <div class="section-header">Unlocked Frogs</div>
                 <div id="log-frogs"></div>
-                
-                <div class="section-header" style="margin-top: 25px;">Hats</div>
+                <div class="section-header" style="margin-top: 20px;">Unlocked Hats</div>
                 <div id="log-hats"></div>
             </div>
 
@@ -90,6 +87,8 @@
 
 <script>
     let clicks = 0;
+    let totalClicksEver = 0;
+    let maxLevelReached = 1;
     let frogs = [];
     let unlockedFrogs = new Set(['Green Frog']);
     let unlockedHats = new Set();
@@ -105,8 +104,13 @@
     const hatData = [
         { type: 'Leaf Hat', cost: 20 },
         { type: 'Tiny Crown', cost: 100 },
-        { type: 'Wizard Hat', cost: 500 },
-        { type: 'Party Hat', cost: 1000 }
+        { type: 'Wizard Hat', cost: 500 }
+    ];
+
+    const achievements = [
+        { id: '100clicks', title: 'Ivrig Klikker', desc: 'Nå 100 totale klikk', goal: 100, type: 'clicks' },
+        { id: 'lvl2', title: 'Evolusjon', desc: 'Få en frosk til Level 2', goal: 2, type: 'level' },
+        { id: 'lvl3', title: 'Merge Master', desc: 'Få en frosk til Level 3', goal: 3, type: 'level' }
     ];
 
     function showTab(tab) {
@@ -114,47 +118,44 @@
             document.getElementById('tab-' + t).style.display = tab === t ? 'block' : 'none';
             document.getElementById('btn-' + t).className = 'tab-btn' + (tab === t ? ' active' : '');
         });
-        if(tab === 'log') updateLogUI();
+        updateShopUI();
+        updateLogUI();
+        updateAchUI();
     }
 
     function buyFrog(type, cost) {
         if (clicks >= cost) {
             clicks -= cost;
-            addFrogToWorld(type);
-            updateStats();
-        } else {
-            alert("Mangler clicks!");
-        }
+            addFrogToWorld(type, 1);
+            updateUI();
+            updateLogUI();
+        } else { alert("Du trenger flere clicks!"); }
     }
 
     function buyHat(type, cost) {
-        if (unlockedHats.has(type)) {
-            alert("Du har allerede denne hatten!");
-            return;
-        }
+        if (unlockedHats.has(type)) return;
         if (clicks >= cost) {
             clicks -= cost;
             unlockedHats.add(type);
-            updateStats();
-            updateShopUI(); // Oppdaterer knappen i shop
-            alert("Hatt låst opp! Sjekk LOG-fanen.");
-        } else {
-            alert("Mangler clicks!");
-        }
+            updateUI();
+            updateShopUI();
+            updateLogUI(); // VIKTIG: Oppdaterer loggen med en gang
+            alert("Hatt kjøpt! Sjekk LOG-fanen.");
+        } else { alert("Ikke nok clicks!"); }
     }
 
-    function addFrogToWorld(type, lvl = 1, x = null, y = null) {
-        const newFrog = {
+    function addFrogToWorld(type, lvl, x, y) {
+        const frog = {
             id: Date.now() + Math.random(),
             type: type,
+            lvl: lvl,
             x: x || 350 + Math.random() * 100,
-            y: y || 350 + Math.random() * 100,
-            lvl: lvl
+            y: y || 350 + Math.random() * 100
         };
-        frogs.push(newFrog);
+        frogs.push(frog);
         unlockedFrogs.add(type);
+        if (lvl > maxLevelReached) maxLevelReached = lvl;
         renderFrogs();
-        updateShopUI();
     }
 
     function renderFrogs() {
@@ -170,90 +171,121 @@
             div.addEventListener('touchstart', (e) => { dragging = f; }, {passive: false});
             div.addEventListener('touchmove', (e) => {
                 if (!dragging || dragging.id !== f.id) return;
-                const touch = e.touches[0];
-                f.x = touch.clientX - 60; f.y = touch.clientY - 60;
+                const t = e.touches[0];
+                f.x = t.clientX - 60; f.y = t.clientY - 60;
                 div.style.left = f.x + 'px'; div.style.top = f.y + 'px';
             }, {passive: false});
             div.addEventListener('touchend', () => { checkMerge(f); dragging = null; });
-            div.addEventListener('click', () => { clicks += f.lvl; updateStats(); });
-
+            
+            div.addEventListener('click', () => { 
+                clicks += f.lvl; 
+                totalClicksEver += f.lvl; 
+                updateUI(); 
+            });
             layer.appendChild(div);
         });
     }
 
     function checkMerge(f1) {
         const zone = document.getElementById('merge-zone').getBoundingClientRect();
-        if (f1.x + 60 > zone.left && f1.x + 60 < zone.right && f1.y + 60 > zone.top && f1.y + 60 < zone.bottom) {
+        const cx = f1.x + 60; const cy = f1.y + 60;
+        if (cx > zone.left && cx < zone.right && cy > zone.top && cy < zone.bottom) {
             const partner = frogs.find(f2 => f2.id !== f1.id && f2.type === f1.type && f2.lvl === f1.lvl && Math.abs(f1.x - f2.x) < 100);
             if (partner) {
                 const type = f1.type; const nextLvl = f1.lvl + 1;
                 frogs = frogs.filter(f => f.id !== f1.id && f.id !== partner.id);
                 addFrogToWorld(type, nextLvl, zone.left + 90, zone.top + 90);
+                alert("MERGE! Level " + nextLvl);
+                updateAchUI();
             }
         }
     }
 
-    // Automatisk hopping
-    setInterval(() => {
-        frogs.forEach(f => {
-            if (dragging && dragging.id === f.id) return;
-            f.x += (Math.random() - 0.5) * 80;
-            f.y += (Math.random() - 0.5) * 80;
-            renderFrogs();
-        });
-    }, 3000);
-
-    function updateStats() { document.getElementById('count').innerText = Math.floor(clicks); }
+    function updateUI() {
+        document.getElementById('count').innerText = Math.floor(clicks);
+    }
 
     function updateShopUI() {
-        const frogCont = document.getElementById('shop-frogs');
-        frogCont.innerHTML = '';
+        const fCont = document.getElementById('shop-frogs');
+        fCont.innerHTML = '';
         frogData.forEach(d => {
             const div = document.createElement('div');
             div.className = 'item';
-            div.innerHTML = `${d.type}<br><small>Pris: ${d.cost}</small>`;
+            div.innerHTML = `<b>${d.type}</b><br>Pris: ${d.cost}`;
             div.onclick = () => buyFrog(d.type, d.cost);
-            frogCont.appendChild(div);
+            fCont.appendChild(div);
         });
 
-        const hatCont = document.getElementById('shop-hats');
-        hatCont.innerHTML = '';
+        const hCont = document.getElementById('shop-hats');
+        hCont.innerHTML = '';
         hatData.forEach(d => {
             const div = document.createElement('div');
             div.className = 'item';
-            const owns = unlockedHats.has(d.type);
-            div.innerHTML = `${d.type}<br><small>${owns ? 'EID' : 'Pris: ' + d.cost}</small>`;
-            if(!owns) div.onclick = () => buyHat(d.type, d.cost);
-            hatCont.appendChild(div);
+            const eier = unlockedHats.has(d.type);
+            div.innerHTML = `<b>${d.type}</b><br>${eier ? 'EID' : 'Pris: ' + d.cost}`;
+            if(!eier) div.onclick = () => buyHat(d.type, d.cost);
+            hCont.appendChild(div);
         });
     }
 
     function updateLogUI() {
-        const fList = document.getElementById('log-frogs');
-        fList.innerHTML = '';
+        const fl = document.getElementById('log-frogs'); 
+        if(!fl) return;
+        fl.innerHTML = '';
         frogData.forEach(d => {
             const div = document.createElement('div');
-            const open = unlockedFrogs.has(d.type);
-            div.className = 'log-entry ' + (open ? 'unlocked' : 'locked');
-            div.innerText = open ? '✓ ' + d.type : '? Ukjent frosk';
-            fList.appendChild(div);
+            const u = unlockedFrogs.has(d.type);
+            div.className = 'log-entry ' + (u ? 'unlocked' : 'locked');
+            div.innerText = u ? '✓ ' + d.type : '? Ukjent frosk';
+            fl.appendChild(div);
         });
 
-        const hList = document.getElementById('log-hats');
-        hList.innerHTML = '';
+        const hl = document.getElementById('log-hats'); 
+        if(!hl) return;
+        hl.innerHTML = '';
         hatData.forEach(d => {
             const div = document.createElement('div');
-            const open = unlockedHats.has(d.type);
-            div.className = 'log-entry ' + (open ? 'unlocked' : 'locked');
-            div.innerText = open ? '✓ ' + d.type : '? Ukjent hatt';
-            hList.appendChild(div);
+            const u = unlockedHats.has(d.type);
+            div.className = 'log-entry ' + (u ? 'unlocked' : 'locked');
+            div.innerText = u ? '✓ ' + d.type : '? Ukjent hatt';
+            hl.appendChild(div);
         });
     }
+
+    function updateAchUI() {
+        const al = document.getElementById('ach-list'); 
+        if(!al) return;
+        al.innerHTML = '';
+        achievements.forEach(a => {
+            let done = false;
+            if (a.type === 'clicks' && totalClicksEver >= a.goal) done = true;
+            if (a.type === 'level' && maxLevelReached >= a.goal) done = true;
+            
+            const div = document.createElement('div');
+            div.className = 'achievement ' + (done ? 'ach-done' : '');
+            div.innerHTML = `<b>${done ? '✓ ' : ''}${a.title}</b><br>${a.desc}`;
+            al.appendChild(div);
+        });
+    }
+
+    setInterval(() => {
+        if (!dragging) {
+            frogs.forEach(f => {
+                f.x += (Math.random() - 0.5) * 60;
+                f.y += (Math.random() - 0.5) * 60;
+                f.x = Math.max(300, Math.min(window.innerWidth - 120, f.x));
+                f.y = Math.max(50, Math.min(window.innerHeight - 120, f.y));
+            });
+            renderFrogs();
+        }
+        updateAchUI(); 
+    }, 3000);
 
     window.onload = () => {
         addFrogToWorld('Green Frog', 1, 400, 400);
         updateShopUI();
-        updateStats();
+        updateLogUI();
+        updateUI();
     };
 </script>
 </body>
