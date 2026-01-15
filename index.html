@@ -3,366 +3,201 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Frog Clicker iPad Edition</title>
+    <title>Frog Clicker: Merge Mansion</title>
     <style>
-        :root {
-            --grass: #7cfc00;
-            --wood: #5d4037;
-            --ui-bg: rgba(0, 0, 0, 0.85);
-        }
+        :root { --grass: #7cfc00; --wood: #5d4037; --ui: rgba(0,0,0,0.9); --machine: #e74c3c; }
+        body { margin: 0; padding: 0; font-family: 'Courier New', monospace; background: #2c3e50; color: white; overflow: hidden; touch-action: none; }
 
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: 'Courier New', Courier, monospace;
-            background: #2c3e50;
-            color: white;
-            overflow: hidden;
-            touch-action: manipulation; /* Hindrer zooming ved hurtigklikking */
-        }
+        .screen { position: absolute; width: 100vw; height: 100vh; display: none; flex-direction: column; align-items: center; justify-content: center; }
+        #title-screen { display: flex; background: linear-gradient(#4facfe, #00f2fe); z-index: 100; }
+        #game-screen { background: var(--grass); background-image: radial-gradient(#2ecc71 15%, transparent 15%); background-size: 40px 40px; }
 
-        /* Skjermhåndtering */
-        .screen {
-            position: absolute;
-            width: 100vw;
-            height: 100vh;
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
+        /* Merge-maskin */
+        #merge-zone {
+            position: absolute; left: 60%; top: 50%; transform: translate(-50%, -50%);
+            width: 250px; height: 250px; border: 6px solid var(--machine); border-radius: 20px;
+            background: rgba(231, 76, 60, 0.2); display: flex; align-items: center; justify-content: center; z-index: 1;
         }
+        #merge-zone::after { content: "MERGE MACHINE"; color: var(--machine); font-weight: bold; position: absolute; bottom: -30px; }
 
-        #title-screen {
-            display: flex;
-            background: linear-gradient(#4facfe 0%, #00f2fe 100%);
-            z-index: 100;
-        }
-
-        #game-screen {
-            background: var(--grass);
-            background-image: radial-gradient(#2ecc71 15%, transparent 15%);
-            background-size: 40px 40px;
-        }
-
-        /* Sidebar og Tab-system */
-        #sidebar {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 280px;
-            height: 100%;
-            background: var(--ui-bg);
-            border-right: 4px solid var(--wood);
-            z-index: 50;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .tabs {
-            display: flex;
-            background: var(--wood);
-        }
-
-        .tab-btn {
-            flex: 1;
-            padding: 15px 5px;
-            border: none;
-            color: white;
-            background: #3e2723;
-            font-size: 12px;
-            cursor: pointer;
-        }
-
-        .tab-btn.active {
-            background: #8d6e63;
-            font-weight: bold;
-        }
-
-        .tab-content {
-            flex: 1;
-            overflow-y: auto;
-            padding: 15px;
-            display: none;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        /* Frosken og effekter */
+        /* Frosken */
         .frog-container {
-            position: absolute;
-            width: 80px;
-            height: 80px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 50px;
+            position: absolute; width: 120px; height: 120px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 80px; z-index: 10; cursor: grab;
             transition: transform 0.1s;
-            z-index: 10;
         }
+        .frog-lvl { position: absolute; bottom: 0; right: 0; font-size: 20px; background: black; color: gold; padding: 2px 6px; border-radius: 5px; pointer-events: none; }
 
-        /* Hvit outline ved "hover" (berøring på iPad) */
-        .frog-container:active, .frog-container:hover {
-            filter: drop-shadow(2px 0 0 white) drop-shadow(-2px 0 0 white) 
-                    drop-shadow(0 2px 0 white) drop-shadow(0 -2px 0 white);
-        }
-
-        .croak-text {
-            position: absolute;
-            top: -20px;
-            font-size: 14px;
-            background: white;
-            color: black;
-            padding: 2px 6px;
-            border-radius: 10px;
-            display: none;
-        }
-
-        /* Fox */
-        .fox-npc {
-            position: absolute;
-            font-size: 40px;
-            z-index: 20;
-            transition: left 10s linear;
-        }
-
-        /* UI Elementer */
-        #stats {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(0,0,0,0.5);
-            padding: 10px 20px;
-            border-radius: 30px;
-            font-size: 24px;
-            z-index: 60;
-        }
-
-        .menu-btn {
-            position: absolute;
-            top: 10px;
-            left: 290px;
-            font-size: 30px;
-            background: none;
-            border: none;
-            color: black;
-            z-index: 60;
-        }
-
-        button {
-            padding: 10px 20px;
-            margin: 5px;
-            border-radius: 8px;
-            border: none;
-            background: #f1c40f;
-            font-weight: bold;
-        }
-
-        .item-card {
-            background: #444;
-            padding: 10px;
-            margin-bottom: 8px;
-            border-radius: 5px;
-        }
+        /* Sidebar og UI */
+        #sidebar { position: absolute; left: 0; top: 0; width: 250px; height: 100%; background: var(--ui); border-right: 4px solid var(--wood); z-index: 50; display: flex; flex-direction: column; }
+        .tabs { display: flex; background: var(--wood); }
+        .tab-btn { flex: 1; padding: 15px; border: none; color: white; background: #3e2723; }
+        .tab-btn.active { background: #8d6e63; }
+        .tab-content { flex: 1; overflow-y: auto; padding: 15px; display: none; }
+        .tab-content.active { display: block; }
+        #stats { position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.6); padding: 15px; border-radius: 40px; font-size: 24px; z-index: 60; }
+        .shop-card { background: #444; padding: 12px; margin-bottom: 8px; border-radius: 8px; border-left: 5px solid #f1c40f; }
+        .log-item { padding: 5px; color: #888; }
+        .unlocked { color: #2ecc71; font-weight: bold; }
     </style>
 </head>
 <body>
 
     <div id="title-screen" class="screen">
         <h1>FROG CLICKER</h1>
-        <button onclick="startGame()">START GAME</button>
-        <button onclick="alert('Settings: Music On/Off (Placeholder)')">SETTINGS</button>
-        <button onclick="loadGame()">LOAD GAME</button>
+        <button style="padding: 20px; font-size: 20px;" onclick="startGame()">START</button>
     </div>
 
     <div id="game-screen" class="screen">
-        <button class="menu-btn" onclick="backToMenu()">≡</button>
         <div id="stats">Clicks: <span id="count">0</span></div>
+        <div id="merge-zone"></div>
 
         <div id="sidebar">
             <div class="tabs">
                 <button class="tab-btn active" onclick="openTab(event, 'shop')">SHOP</button>
                 <button class="tab-btn" onclick="openTab(event, 'log')">LOG</button>
-                <button class="tab-btn" onclick="openTab(event, 'achievements')">ACHIV</button>
             </div>
-            
             <div id="shop" class="tab-content active">
-                <h3>Hatt Hangar</h3>
-                <div class="item-card" onclick="buyHat('Leaf Hat', 20)">Leaf Hat (20 Clicks)</div>
-                <div class="item-card" onclick="buyHat('Tiny Crown', 100)">Tiny Crown (100 Clicks)</div>
+                <div class="shop-card" onclick="buyFrog('Green Frog', 0)">Green Frog (Gratis)</div>
+                <div class="shop-card" onclick="buyFrog('Blue Frog', 50)">Blue Frog (50)</div>
+                <div class="shop-card" onclick="buyFrog('Fire Frog', 200)">Fire Frog (200)</div>
             </div>
-
             <div id="log" class="tab-content">
-                <h3>Frog Log</h3>
                 <div id="log-list"></div>
-            </div>
-
-            <div id="achievements" class="tab-content">
-                <h3>Achievements</h3>
-                <div id="achieve-list">None yet...</div>
             </div>
         </div>
 
-        <div id="world">
-            </div>
+        <div id="world"></div>
     </div>
 
 <script>
-    let state = {
-        clicks: 0,
-        frogs: [],
-        unlockedSpecies: new Set(['Green Frog']),
-        inventory: []
-    };
+    let state = { clicks: 0, frogs: [], unlockedSpecies: new Set() };
+    let draggedFrog = null;
 
-    // Starter spillet og lager den første frosken
     function startGame() {
         document.getElementById('title-screen').style.display = 'none';
         document.getElementById('game-screen').style.display = 'block';
-        
-        if (state.frogs.length === 0) {
-            spawnFrog("Green Frog", 50, 50); // Midten av skjermen
-        }
-        renderWorld();
-        startFoxTimer();
+        if (state.frogs.length === 0) buyFrog('Green Frog', 0);
+        updateLog();
     }
 
-    function spawnFrog(species, x, y) {
-        const frog = {
-            id: Date.now() + Math.random(),
-            species: species,
-            x: x,
-            y: y,
-            level: 1,
-            hat: 'None'
-        };
-        state.frogs.push(frog);
-        renderWorld();
+    function buyFrog(species, cost) {
+        if (state.clicks >= cost) {
+            state.clicks -= cost;
+            const frog = { id: Math.random(), species, x: 55, y: 45, level: 1 };
+            state.frogs.push(frog);
+            state.unlockedSpecies.add(species);
+            renderWorld();
+            updateUI();
+            updateLog();
+        }
     }
 
     function renderWorld() {
         const world = document.getElementById('world');
         world.innerHTML = '';
-        
         state.frogs.forEach(frog => {
-            const container = document.createElement('div');
-            container.className = 'frog-container';
-            container.style.left = frog.x + '%';
-            container.style.top = frog.y + '%';
-            
-            // iPad touch-event
-            container.ontouchstart = (e) => {
-                e.preventDefault();
-                handleFrogClick(frog, container);
-            };
-            // Mus-event for PC-testing
-            container.onclick = () => handleFrogClick(frog, container);
+            const div = document.createElement('div');
+            div.className = 'frog-container';
+            div.style.left = frog.x + '%';
+            div.style.top = frog.y + '%';
+            div.innerHTML = `🐸<div class="frog-lvl">Lvl ${frog.level}</div>`;
 
-            container.innerHTML = `
-                <div class="croak-text">Ribbit!</div>
-                <div class="frog-icon">🐸</div>
-            `;
-            
-            world.appendChild(container);
+            // Touch-styring for iPad
+            div.ontouchstart = (e) => startDrag(e, frog, div);
+            div.ontouchmove = (e) => doDrag(e);
+            div.ontouchend = (e) => endDrag(e, frog, div);
+
+            // Klikk for poeng (kun hvis vi ikke drar)
+            div.onclick = () => { if(!draggedFrog) { state.clicks += frog.level; updateUI(); } };
+
+            world.appendChild(div);
         });
     }
 
-    function handleFrogClick(frog, element) {
-        state.clicks++;
-        updateUI();
+    function startDrag(e, frog, el) {
+        draggedFrog = { frog, el };
+        el.style.zIndex = 1000;
+        el.style.transition = "none";
+    }
 
-        // Visuell klikk-effekt
-        const bubble = element.querySelector('.croak-text');
-        bubble.style.display = 'block';
-        element.style.transform = 'scale(1.3) rotate(5deg)';
+    function doDrag(e) {
+        if (!draggedFrog) return;
+        const touch = e.touches[0];
+        const xPercent = (touch.clientX / window.innerWidth) * 100;
+        const yPercent = (touch.clientY / window.innerHeight) * 100;
         
-        setTimeout(() => {
-            bubble.style.display = 'none';
-            element.style.transform = 'scale(1) rotate(0deg)';
-        }, 200);
-
-        // Auto-lagring
-        saveGame();
+        draggedFrog.el.style.left = (xPercent - 5) + '%';
+        draggedFrog.el.style.top = (yPercent - 5) + '%';
     }
 
-    function buyHat(name, cost) {
-        if (state.clicks >= cost) {
-            state.clicks -= cost;
-            state.inventory.push(name);
-            alert("Bought " + name + "!");
-            updateUI();
+    function endDrag(e, frog, el) {
+        if (!draggedFrog) return;
+        
+        const rect = el.getBoundingClientRect();
+        const machine = document.getElementById('merge-zone').getBoundingClientRect();
+        
+        // Sjekk om sluppet i maskinen
+        const inMachine = (rect.left < machine.right && rect.right > machine.left &&
+                           rect.top < machine.bottom && rect.bottom > machine.top);
+
+        if (inMachine) {
+            // Sjekk om det er en annen lik frosk i maskinen
+            const match = state.frogs.find(f => 
+                f.id !== frog.id && 
+                f.species === frog.species && 
+                f.level === frog.level &&
+                isInsideMachine(f)
+            );
+
+            if (match) {
+                // MERGE!
+                state.frogs = state.frogs.filter(f => f.id !== frog.id && f.id !== match.id);
+                const upgraded = { ...frog, level: frog.level + 1, id: Math.random(), x: 60, y: 50 };
+                state.frogs.push(upgraded);
+                alert("MERGED! Du har nå en Level " + upgraded.level + " frosk!");
+            } else {
+                // Lagre ny posisjon i maskinen
+                frog.x = (rect.left / window.innerWidth) * 100;
+                frog.y = (rect.top / window.innerHeight) * 100;
+            }
         } else {
-            alert("Ikke nok clicks!");
+            // Flytt frosken til der den ble sluppet
+            frog.x = (rect.left / window.innerWidth) * 100;
+            frog.y = (rect.top / window.innerHeight) * 100;
         }
+
+        draggedFrog = null;
+        el.style.zIndex = 10;
+        el.style.transition = "left 0.6s, top 0.6s";
+        renderWorld();
     }
 
-    function openTab(evt, tabName) {
+    function isInsideMachine(frog) {
+        // Enkel sjekk for å se om frosken er i nærheten av maskin-senteret
+        return (frog.x > 50 && frog.x < 75 && frog.y > 40 && frog.y < 65);
+    }
+
+    function updateLog() {
+        const list = document.getElementById('log-list');
+        const species = ['Green Frog', 'Blue Frog', 'Fire Frog'];
+        list.innerHTML = '';
+        species.forEach(s => {
+            const div = document.createElement('div');
+            div.className = 'log-item' + (state.unlockedSpecies.has(s) ? ' unlocked' : '');
+            div.innerText = state.unlockedSpecies.has(s) ? "✓ " + s : "? Ukjent";
+            list.appendChild(div);
+        });
+    }
+
+    function updateUI() { document.getElementById('count').innerText = Math.floor(state.clicks); }
+    function openTab(evt, name) {
         const contents = document.getElementsByClassName("tab-content");
         for (let c of contents) c.style.display = "none";
-        const buttons = document.getElementsByClassName("tab-btn");
-        for (let b of buttons) b.classList.remove("active");
-        
-        document.getElementById(tabName).style.display = "block";
-        evt.currentTarget.classList.add("active");
-    }
-
-    function startFoxTimer() {
-        setTimeout(() => {
-            const fox = document.createElement('div');
-            fox.className = 'fox-npc';
-            fox.innerHTML = '🦊';
-            fox.style.top = Math.random() * 80 + '%';
-            fox.style.left = '-50px';
-            document.getElementById('world').appendChild(fox);
-
-            setTimeout(() => fox.style.left = '110vw', 100);
-            
-            fox.onclick = () => {
-                state.clicks += 50;
-                alert("Bonus fra reven!");
-                fox.remove();
-                updateUI();
-            };
-            
-            setTimeout(() => fox.remove(), 10000);
-            startFoxTimer();
-        }, 20000 + Math.random() * 20000);
-    }
-
-    function updateUI() {
-        document.getElementById('count').innerText = Math.floor(state.clicks);
-    }
-
-    function saveGame() {
-        localStorage.setItem('frogData', JSON.stringify({
-            clicks: state.clicks,
-            frogs: state.frogs,
-            inventory: state.inventory
-        }));
-    }
-
-    function loadGame() {
-        const data = localStorage.getItem('frogData');
-        if (data) {
-            const parsed = JSON.parse(data);
-            state.clicks = parsed.clicks;
-            state.frogs = parsed.frogs;
-            state.inventory = parsed.inventory;
-            startGame();
-        } else {
-            alert("Ingen lagrede spill funnet.");
-        }
-    }
-
-    function backToMenu() {
-        document.getElementById('game-screen').style.display = 'none';
-        document.getElementById('title-screen').style.display = 'flex';
+        document.getElementById(name).style.display = "block";
     }
 </script>
 </body>
 </html>
-  
-
-    
-            
+       
