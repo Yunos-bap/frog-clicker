@@ -3,77 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Frog Clicker iPad Fix</title>
+    <title>Frog Clicker: Professional Edition</title>
     <style>
-        :root { --grass: #7cfc00; --wood: #5d4037; --ui: rgba(0,0,0,0.9); --machine: #ff4757; }
-        body { margin: 0; padding: 0; font-family: sans-serif; background: #2c3e50; color: white; overflow: hidden; touch-action: none; }
+        :root { --grass: #7cfc00; --wood: #5d4037; --ui: rgba(0,0,0,0.92); --machine: #ff4757; }
+        body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; background: #2c3e50; color: white; overflow: hidden; touch-action: none; }
 
-        /* Spillområde */
         #game-screen { position: absolute; width: 100vw; height: 100vh; background: var(--grass); display: block; }
 
-        /* Merge Machine - Stor og tydelig boks midt i bildet */
+        /* Merge Machine */
         #merge-zone {
             position: absolute; left: 60%; top: 50%; transform: translate(-50%, -50%);
-            width: 300px; height: 300px; border: 8px dashed var(--machine); border-radius: 30px;
-            background: rgba(255, 71, 87, 0.2); display: flex; align-items: center; justify-content: center;
-            font-weight: bold; color: white; font-size: 24px; z-index: 1; pointer-events: none;
+            width: 300px; height: 300px; border: 6px dashed var(--machine); border-radius: 40px;
+            background: rgba(255, 71, 87, 0.15); display: flex; align-items: center; justify-content: center;
+            font-weight: bold; color: white; font-size: 20px; z-index: 1; pointer-events: none;
         }
 
-        /* Frosken - Stor og enkel å ta på */
+        /* Frosken */
         .frog {
             position: absolute; width: 120px; height: 120px;
             font-size: 80px; display: flex; align-items: center; justify-content: center;
-            z-index: 10; cursor: pointer; transition: transform 0.1s;
-            user-select: none; -webkit-user-select: none;
+            z-index: 10; cursor: pointer; user-select: none;
+            transition: transform 0.1s, left 0.5s ease-out, top 0.5s ease-out;
         }
-        .lvl-tag { position: absolute; bottom: 0; right: 0; font-size: 18px; background: black; color: gold; padding: 2px 8px; border-radius: 10px; }
+        .lvl-tag { position: absolute; bottom: 5px; right: 5px; font-size: 16px; background: black; color: gold; padding: 2px 8px; border-radius: 10px; pointer-events: none; }
 
         /* Sidebar */
         #sidebar { 
-            position: absolute; left: 0; top: 0; width: 260px; height: 100%; 
+            position: absolute; left: 0; top: 0; width: 280px; height: 100%; 
             background: var(--ui); border-right: 5px solid var(--wood); z-index: 100; 
             display: flex; flex-direction: column; 
         }
-        .tabs { display: flex; height: 60px; }
-        .tab-btn { flex: 1; border: none; background: #3e2723; color: white; font-weight: bold; font-size: 16px; }
-        .tab-btn.active { background: #8d6e63; }
+        .tabs { display: flex; height: 50px; background: var(--wood); }
+        .tab-btn { flex: 1; border: none; background: transparent; color: #ccc; font-weight: bold; font-size: 12px; cursor: pointer; }
+        .tab-btn.active { background: #8d6e63; color: white; }
 
-        .content { flex: 1; overflow-y: scroll; padding: 15px; -webkit-overflow-scrolling: touch; }
+        .content { flex: 1; overflow-y: auto; padding: 15px; display: none; }
         
-        /* Shop Layout */
-        .section-header { color: #f1c40f; text-transform: uppercase; font-size: 14px; margin: 20px 0 10px 0; border-bottom: 2px solid #555; }
-        .item { background: #333; padding: 15px; margin-bottom: 10px; border-radius: 10px; border-left: 5px solid #f1c40f; font-size: 14px; }
+        /* UI Elementer */
+        .section-header { color: #f1c40f; text-transform: uppercase; font-size: 12px; margin: 15px 0 8px 0; border-bottom: 1px solid #444; padding-bottom: 5px; }
+        .item { background: #222; padding: 12px; margin-bottom: 8px; border-radius: 8px; border-left: 4px solid #f1c40f; font-size: 14px; cursor: pointer; }
+        .item:active { background: #333; }
+        
+        .achievement { background: #2c3e50; padding: 10px; margin-bottom: 5px; border-radius: 5px; border: 1px solid #444; font-size: 12px; opacity: 0.5; }
+        .achievement.unlocked { opacity: 1; border-color: #2ecc71; background: #1a3c2a; }
 
-        #stats { position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.7); padding: 15px 25px; border-radius: 50px; font-size: 24px; z-index: 110; border: 2px solid white; }
+        #stats-panel { position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.8); padding: 10px 25px; border-radius: 50px; font-size: 24px; z-index: 110; border: 2px solid #f1c40f; }
     </style>
 </head>
 <body>
 
     <div id="game-screen">
-        <div id="stats">Clicks: <span id="count">0</span></div>
+        <div id="stats-panel">Clicks: <span id="count">0</span></div>
         <div id="merge-zone">MERGE MACHINE</div>
 
         <div id="sidebar">
             <div class="tabs">
                 <button id="btn-shop" class="tab-btn active" onclick="showTab('shop')">SHOP</button>
                 <button id="btn-log" class="tab-btn" onclick="showTab('log')">LOG</button>
+                <button id="btn-ach" class="tab-btn" onclick="showTab('ach')">ACHIV</button>
             </div>
             
             <div id="tab-shop" class="content" style="display: block;">
                 <div class="section-header">Frogs</div>
-                <div class="item" onclick="addFrog('Green Frog', 0)">Green Frog (Gratis)</div>
-                <div class="item" onclick="addFrog('Blue Frog', 50)">Blue Frog (50)</div>
-                <div class="item" onclick="addFrog('Red Frog', 150)">Red Frog (150)</div>
-                <div class="item" onclick="addFrog('Yellow Frog', 500)">Yellow Frog (500)</div>
+                <div id="shop-items">
+                    </div>
 
                 <div class="section-header">Hat Hangar</div>
-                <div class="item" onclick="alert('Kommer snart!')">Leaf Hat (20)</div>
-                <div class="item" onclick="alert('Kommer snart!')">Crown (100)</div>
+                <div class="item" onclick="alert('Hatter kommer i neste oppdatering!')">Leaf Hat (20)</div>
+                <div class="item" onclick="alert('Hatter kommer i neste oppdatering!')">Crown (100)</div>
             </div>
 
-            <div id="tab-log" class="content" style="display: none;">
+            <div id="tab-log" class="content">
                 <div class="section-header">Unlocked Frogs</div>
                 <div id="log-list"></div>
+            </div>
+
+            <div id="tab-ach" class="content">
+                <div class="section-header">Achievements</div>
+                <div id="ach-list"></div>
             </div>
         </div>
 
@@ -83,39 +90,56 @@
 <script>
     let clicks = 0;
     let frogs = [];
-    let unlocked = new Set(['Green Frog']);
+    let unlockedTypes = new Set(['Green Frog']);
     let dragging = null;
+    let totalClicksEver = 0;
 
-    // Funksjon for å bytte faner
+    const frogData = [
+        { type: 'Green Frog', cost: 50 },
+        { type: 'Blue Frog', cost: 150 },
+        { type: 'Red Frog', cost: 500 },
+        { type: 'Yellow Frog', cost: 1500 }
+    ];
+
+    const achs = [
+        { id: 'first_click', title: 'Første hopp!', desc: 'Klikk på en frosk én gang.', goal: 1, current: 0, done: false },
+        { id: 'click_100', title: 'Ivrig klikker', desc: 'Nå 100 totale klikk.', goal: 100, current: 0, done: false },
+        { id: 'merge_master', title: 'Merge Master', desc: 'Oppnå Level 3 frosk.', goal: 3, current: 0, done: false }
+    ];
+
     function showTab(tab) {
-        document.getElementById('tab-shop').style.display = tab === 'shop' ? 'block' : 'none';
-        document.getElementById('tab-log').style.display = tab === 'log' ? 'block' : 'none';
-        document.getElementById('btn-shop').className = 'tab-btn' + (tab === 'shop' ? ' active' : '');
-        document.getElementById('btn-log').className = 'tab-btn' + (tab === 'log' ? ' active' : '');
+        ['shop', 'log', 'ach'].forEach(t => {
+            document.getElementById('tab-' + t).style.display = tab === t ? 'block' : 'none';
+            document.getElementById('btn-' + t).className = 'tab-btn' + (tab === t ? ' active' : '');
+        });
         if(tab === 'log') updateLogUI();
+        if(tab === 'ach') updateAchUI();
     }
 
-    // Legge til frosk
-    function addFrog(type, cost) {
+    function buyFrog(type, cost) {
         if (clicks >= cost) {
             clicks -= cost;
-            const newFrog = {
-                id: Date.now() + Math.random(),
-                type: type,
-                x: 300 + Math.random() * 200,
-                y: 300 + Math.random() * 200,
-                lvl: 1
-            };
-            frogs.push(newFrog);
-            unlocked.add(type);
+            addFrogToWorld(type);
             updateStats();
-            renderFrogs();
         } else {
-            alert("Ikke nok clicks!");
+            alert("Du trenger " + (cost - clicks) + " flere clicks!");
         }
     }
 
-    // Tegne alle frosker
+    function addFrogToWorld(type, lvl = 1, x = null, y = null) {
+        const newFrog = {
+            id: Date.now() + Math.random(),
+            type: type,
+            x: x || 350 + Math.random() * 100,
+            y: y || 350 + Math.random() * 100,
+            lvl: lvl
+        };
+        frogs.push(newFrog);
+        unlockedTypes.add(type);
+        renderFrogs();
+        updateShopUI();
+    }
+
     function renderFrogs() {
         const layer = document.getElementById('frog-layer');
         layer.innerHTML = '';
@@ -128,14 +152,15 @@
             div.style.top = f.y + 'px';
             div.innerHTML = `🐸<div class="lvl-tag">Lvl ${f.lvl}</div>`;
 
-            // Touch-events for iPad
+            // Touch-handling for iPad
             div.addEventListener('touchstart', (e) => {
                 dragging = f;
-                div.style.transform = 'scale(1.2)';
+                div.style.zIndex = 1000;
+                div.style.transform = 'scale(1.3)';
             }, {passive: false});
 
             div.addEventListener('touchmove', (e) => {
-                if (!dragging) return;
+                if (!dragging || dragging.id !== f.id) return;
                 const touch = e.touches[0];
                 f.x = touch.clientX - 60;
                 f.y = touch.clientY - 60;
@@ -145,80 +170,140 @@
 
             div.addEventListener('touchend', (e) => {
                 div.style.transform = 'scale(1)';
+                div.style.zIndex = 10;
                 checkMerge(f);
                 dragging = null;
             });
 
-            // Klikk for poeng
+            // Klikk-håndtering
             div.addEventListener('click', () => {
+                if (dragging) return;
                 clicks += f.lvl;
+                totalClicksEver += f.lvl;
                 updateStats();
+                checkAchievements();
+                
+                // Klikk-animasjon
+                div.style.transform = 'scale(0.8)';
+                setTimeout(() => div.style.transform = 'scale(1)', 100);
             });
 
             layer.appendChild(div);
         });
     }
 
-    // Sjekk om to frosker skal merges
     function checkMerge(f1) {
-        const machine = document.getElementById('merge-zone').getBoundingClientRect();
-        
-        // Sjekk om f1 er i maskinen
-        if (f1.x + 60 > machine.left && f1.x + 60 < machine.right &&
-            f1.y + 60 > machine.top && f1.y + 60 < machine.bottom) {
+        const zone = document.getElementById('merge-zone').getBoundingClientRect();
+        const f1CenterX = f1.x + 60;
+        const f1CenterY = f1.y + 60;
+
+        if (f1CenterX > zone.left && f1CenterX < zone.right &&
+            f1CenterY > zone.top && f1CenterY < zone.bottom) {
             
-            const target = frogs.find(f2 => 
+            const partner = frogs.find(f2 => 
                 f2.id !== f1.id && 
                 f2.type === f1.type && 
                 f2.lvl === f1.lvl &&
-                Math.abs(f1.x - f2.x) < 80 && 
-                Math.abs(f1.y - f2.y) < 80
+                Math.abs(f1.x - f2.x) < 100 && 
+                Math.abs(f1.y - f2.y) < 100
             );
 
-            if (target) {
-                frogs = frogs.filter(f => f.id !== f1.id && f.id !== target.id);
-                addFrog(f1.type, 0); // Lager ny
-                const ny = frogs[frogs.length - 1];
-                ny.lvl = f1.lvl + 1; // Oppgraderer nivå
-                ny.x = machine.left + 80;
-                ny.y = machine.top + 80;
-                renderFrogs();
+            if (partner) {
+                // Slett begge
+                const currentType = f1.type;
+                const nextLvl = f1.lvl + 1;
+                frogs = frogs.filter(f => f.id !== f1.id && f.id !== partner.id);
+                
+                // Lag ny i senter av maskinen
+                addFrogToWorld(currentType, nextLvl, zone.left + 90, zone.top + 90);
+                
+                // Sjekk merge achievement
+                if(nextLvl >= 3) {
+                    const a = achs.find(x => x.id === 'merge_master');
+                    a.current = nextLvl;
+                    checkAchievements();
+                }
             }
         }
     }
 
-    // Froske-hopping
+    // Automatisk hopping
     setInterval(() => {
         frogs.forEach(f => {
             if (dragging && dragging.id === f.id) return;
-            // Hopp litt tilfeldig
-            f.x += (Math.random() - 0.5) * 40;
-            f.y += (Math.random() - 0.5) * 40;
             
+            // Hopp innenfor skjermen
+            f.x += (Math.random() - 0.5) * 100;
+            f.y += (Math.random() - 0.5) * 100;
+            
+            // Hold frosken på skjermen
+            f.x = Math.max(280, Math.min(window.innerWidth - 120, f.x));
+            f.y = Math.max(20, Math.min(window.innerHeight - 120, f.y));
+
             const el = document.getElementById('f-' + f.id);
             if (el) {
                 el.style.left = f.x + 'px';
                 el.style.top = f.y + 'px';
+                // Hopp-animasjon
+                el.style.transform = 'translateY(-20px)';
+                setTimeout(() => el.style.transform = 'translateY(0px)', 300);
             }
         });
-    }, 3000);
+    }, 4000);
 
-    function updateStats() { document.getElementById('count').innerText = clicks; }
+    function updateStats() { document.getElementById('count').innerText = Math.floor(clicks); }
+
+    function updateShopUI() {
+        const container = document.getElementById('shop-items');
+        container.innerHTML = '';
+        frogData.forEach(data => {
+            const item = document.createElement('div');
+            item.className = 'item';
+            item.innerHTML = `<b>${data.type}</b><br>Pris: ${data.cost} clicks`;
+            item.onclick = () => buyFrog(data.type, data.cost);
+            container.appendChild(item);
+        });
+    }
 
     function updateLogUI() {
         const list = document.getElementById('log-list');
         list.innerHTML = '';
-        ['Green Frog', 'Blue Frog', 'Red Frog', 'Yellow Frog'].forEach(type => {
+        frogData.forEach(d => {
             const div = document.createElement('div');
-            div.style.padding = '10px';
-            div.style.color = unlocked.has(type) ? '#2ecc71' : '#555';
-            div.innerText = unlocked.has(type) ? '✓ ' + type : '? Ukjent';
+            div.style.padding = '8px';
+            const isUnlocked = unlockedTypes.has(d.type);
+            div.style.color = isUnlocked ? '#2ecc71' : '#555';
+            div.innerText = isUnlocked ? '✓ ' + d.type : '? Ukjent frosk';
             list.appendChild(div);
         });
     }
 
-    // Start med en frosk
-    window.onload = () => { addFrog('Green Frog', 0); };
+    function updateAchUI() {
+        const list = document.getElementById('ach-list');
+        list.innerHTML = '';
+        achs.forEach(a => {
+            const div = document.createElement('div');
+            div.className = 'achievement' + (a.done ? ' unlocked' : '');
+            div.innerHTML = `<strong>${a.title}</strong><br>${a.desc}`;
+            list.appendChild(div);
+        });
+    }
+
+    function checkAchievements() {
+        achs.forEach(a => {
+            if (a.done) return;
+            if (a.id === 'first_click' && totalClicksEver >= 1) a.done = true;
+            if (a.id === 'click_100' && totalClicksEver >= 100) a.done = true;
+            if (a.id === 'merge_master' && a.current >= 3) a.done = true;
+        });
+    }
+
+    window.onload = () => {
+        // Legg til den aller første frosken GRATIS
+        addFrogToWorld('Green Frog', 1, 400, 400);
+        updateShopUI();
+        updateStats();
+    };
 </script>
 </body>
 </html>
