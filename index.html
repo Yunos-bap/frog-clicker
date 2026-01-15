@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Frog Clicker: Hat & Collector Edition</title>
+    <title>Frog Clicker: Input Fix</title>
     <style>
         :root { --grass: #7cfc00; --wood: #5d4037; --ui: rgba(0,0,0,0.95); --machine: #ff4757; }
         body { margin: 0; padding: 0; font-family: 'Arial', sans-serif; background: #2c3e50; color: white; overflow: hidden; touch-action: none; }
@@ -20,17 +20,12 @@
             position: absolute; width: 120px; height: 120px; font-size: 80px; 
             display: flex; align-items: center; justify-content: center;
             z-index: 10; cursor: pointer; user-select: none;
-            transition: transform 0.1s, left 0.4s ease-out, top 0.4s ease-out;
+            transition: transform 0.1s; /* Only transform for feedback, positioning handled by JS */
         }
 
         .hat-overlay {
-            position: absolute;
-            top: -25px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 45px;
-            pointer-events: none;
-            z-index: 11;
+            position: absolute; top: -25px; left: 50%; transform: translateX(-50%);
+            font-size: 45px; pointer-events: none; z-index: 11;
         }
 
         .lvl-tag { position: absolute; bottom: 5px; right: 5px; font-size: 16px; background: black; color: gold; padding: 2px 8px; border-radius: 10px; pointer-events: none; }
@@ -48,13 +43,8 @@
         .section-header { color: #f1c40f; text-transform: uppercase; font-size: 12px; margin: 15px 0 8px 0; border-bottom: 1px solid #444; padding-bottom: 5px; }
         .item { background: #222; padding: 12px; margin-bottom: 8px; border-radius: 8px; border-left: 4px solid #f1c40f; font-size: 14px; cursor: pointer; }
         .item.remove-btn { border-left-color: #ff4757; color: #ff4757; text-align: center; font-weight: bold; }
-        
-        .log-entry { padding: 8px; margin-bottom: 4px; border-radius: 4px; background: rgba(255,255,255,0.05); font-size: 14px; }
-        .unlocked { color: #2ecc71; font-weight: bold; border-left: 3px solid #2ecc71; }
-        .locked { color: #555; font-style: italic; }
         .achievement { background: #1a1a1a; padding: 10px; margin-bottom: 8px; border-radius: 8px; border: 1px solid #444; font-size: 13px; }
         .ach-done { border-color: #2ecc71; background: #0e2b1a; }
-        
         #stats-panel { position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.8); padding: 10px 25px; border-radius: 50px; font-size: 24px; z-index: 110; border: 2px solid #f1c40f; }
     </style>
 </head>
@@ -103,7 +93,7 @@
     let unlockedHats = new Set();
     let currentEquippedHat = null;
     let dragging = null;
-    let isMoving = false;
+    let touchStartTime = 0;
 
     const frogData = [{type:'Green Frog', cost:50}, {type:'Blue Frog', cost:150}, {type:'Red Frog', cost:500}, {type:'Yellow Frog', cost:1500}];
     const hatData = [{type:'Leaf Hat', cost:20, emoji: '🍃'}, {type:'Tiny Crown', cost:100, emoji: '👑'}, {type:'Wizard Hat', cost:500, emoji: '🧙‍♂️'}];
@@ -128,24 +118,14 @@
     }
 
     function buyHat(type, cost, emoji) {
-        if (unlockedHats.has(type)) {
-            currentEquippedHat = emoji;
-            renderFrogs();
-            return;
-        }
+        if (unlockedHats.has(type)) { currentEquippedHat = emoji; renderFrogs(); return; }
         if (clicks >= cost) { 
-            clicks -= cost; 
-            unlockedHats.add(type); 
-            currentEquippedHat = emoji;
-            updateUI(); updateShopUI(); updateLogUI(); updateAchUI();
-            renderFrogs();
+            clicks -= cost; unlockedHats.add(type); currentEquippedHat = emoji;
+            updateUI(); updateShopUI(); updateLogUI(); updateAchUI(); renderFrogs();
         } else { alert("Not enough clicks!"); }
     }
 
-    function removeHat() {
-        currentEquippedHat = null;
-        renderFrogs();
-    }
+    function removeHat() { currentEquippedHat = null; renderFrogs(); }
 
     function addFrogToWorld(type, lvl, x, y) {
         const frog = { id: Date.now() + Math.random(), type: type, lvl: lvl, x: x || 350, y: y || 400, inMachine: false };
@@ -165,25 +145,51 @@
             let hatHTML = currentEquippedHat ? `<div class="hat-overlay">${currentEquippedHat}</div>` : '';
             div.innerHTML = `${hatHTML}🐸<div class="lvl-tag">Lvl ${f.lvl}</div>`;
 
-            div.addEventListener('touchstart', (e) => { dragging = f; isMoving = false; }, {passive: false});
-            div.addEventListener('touchmove', (e) => {
+            // UNIFIED INPUT HANDLING
+            const startAction = (e) => {
+                dragging = f;
+                touchStartTime = Date.now();
+                div.style.transition = "none"; 
+            };
+
+            const moveAction = (e) => {
                 if (!dragging || dragging.id !== f.id) return;
-                isMoving = true;
-                const t = e.touches[0];
-                f.x = t.clientX - 60; f.y = t.clientY - 60;
-                div.style.left = f.x + 'px'; div.style.top = f.y + 'px';
-            }, {passive: false});
-            div.addEventListener('touchend', () => { if (dragging) handleDrop(dragging); dragging = null; });
-            
-            div.addEventListener('mousedown', () => { isMoving = false; });
-            div.addEventListener('click', () => { 
-                if (!isMoving) {
-                    clicks += f.lvl; totalClicksEver += f.lvl; 
-                    updateUI(); updateAchUI();
-                    div.style.transform = 'scale(0.9)';
-                    setTimeout(() => div.style.transform = 'scale(1)', 50);
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                f.x = clientX - 60;
+                f.y = clientY - 60;
+                div.style.left = f.x + 'px';
+                div.style.top = f.y + 'px';
+            };
+
+            const endAction = (e) => {
+                if (!dragging) return;
+                const duration = Date.now() - touchStartTime;
+                
+                // If it was a quick tap, count as click
+                if (duration < 200) {
+                    clicks += f.lvl;
+                    totalClicksEver += f.lvl;
+                    updateUI();
+                    updateAchUI();
+                    div.style.transform = "scale(1.2)";
+                    setTimeout(() => div.style.transform = "scale(1)", 100);
+                } else {
+                    handleDrop(f);
                 }
-            });
+                
+                div.style.transition = "left 0.4s ease-out, top 0.4s ease-out, transform 0.1s";
+                dragging = null;
+            };
+
+            div.addEventListener('touchstart', (e) => { e.preventDefault(); startAction(e); }, {passive: false});
+            window.addEventListener('touchmove', moveAction, {passive: false});
+            window.addEventListener('touchend', endAction);
+
+            div.addEventListener('mousedown', startAction);
+            window.addEventListener('mousemove', moveAction);
+            window.addEventListener('mouseup', endAction);
+
             layer.appendChild(div);
         });
     }
@@ -193,6 +199,7 @@
         const cx = f1.x + 60; const cy = f1.y + 60;
         const isInside = (cx > zone.left && cx < zone.right && cy > zone.top && cy < zone.bottom);
         let frogsInMachine = frogs.filter(f => f.inMachine && f.id !== f1.id);
+
         if (isInside) {
             if (frogsInMachine.length < 2) {
                 f1.inMachine = true;
@@ -213,23 +220,16 @@
 
     function updateShopUI() {
         const hCont = document.getElementById('shop-hats'); hCont.innerHTML = '';
-        
-        // Add Remove Hat Button
         if (unlockedHats.size > 0) {
-            const rem = document.createElement('div');
-            rem.className = 'item remove-btn';
-            rem.innerText = 'REMOVE HAT';
-            rem.onclick = removeHat;
-            hCont.appendChild(rem);
+            const rem = document.createElement('div'); rem.className = 'item remove-btn';
+            rem.innerText = 'REMOVE HAT'; rem.onclick = removeHat; hCont.appendChild(rem);
         }
-
         hatData.forEach(d => {
             const div = document.createElement('div'); div.className = 'item';
             const owns = unlockedHats.has(d.type);
             div.innerHTML = `<b>${d.type}</b><br>${owns ? 'EQUIP' : 'Price: ' + d.cost}`;
             div.onclick = () => buyHat(d.type, d.cost, d.emoji); hCont.appendChild(div);
         });
-
         const fCont = document.getElementById('shop-frogs'); fCont.innerHTML = '';
         frogData.forEach(d => {
             const div = document.createElement('div'); div.className = 'item';
@@ -239,19 +239,19 @@
     }
 
     function updateLogUI() {
-        const fl = document.getElementById('log-frogs'); if(!fl) return; fl.innerHTML = '';
+        const fl = document.getElementById('log-frogs'); if(fl) fl.innerHTML = '';
         frogData.forEach(d => {
             const div = document.createElement('div');
             const u = unlockedFrogs.has(d.type);
             div.className = 'log-entry ' + (u ? 'unlocked' : 'locked');
-            div.innerText = u ? '✓ ' + d.type : '? Unknown Frog'; fl.appendChild(div);
+            div.innerText = u ? '✓ ' + d.type : '? Unknown Frog'; if(fl) fl.appendChild(div);
         });
-        const hl = document.getElementById('log-hats'); if(!hl) return; hl.innerHTML = '';
+        const hl = document.getElementById('log-hats'); if(hl) hl.innerHTML = '';
         hatData.forEach(d => {
             const div = document.createElement('div');
             const u = unlockedHats.has(d.type);
             div.className = 'log-entry ' + (u ? 'unlocked' : 'locked');
-            div.innerText = u ? '✓ ' + d.type : '? Unknown Hat'; hl.appendChild(div);
+            div.innerText = u ? '✓ ' + d.type : '? Unknown Hat'; if(hl) hl.appendChild(div);
         });
     }
 
@@ -262,7 +262,6 @@
             if (a.type === 'clicks' && totalClicksEver >= a.goal) done = true;
             if (a.type === 'level' && maxLevelReached >= a.goal) done = true;
             if (a.type === 'hats' && unlockedHats.size >= a.goal) done = true;
-            
             const div = document.createElement('div');
             div.className = 'achievement ' + (done ? 'ach-done' : '');
             div.innerHTML = `<b>${done ? '✓ ' : ''}${a.title}</b><br>${a.desc}`; al.appendChild(div);
