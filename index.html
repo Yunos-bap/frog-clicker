@@ -177,3 +177,74 @@ A simulation game.
 </script>
 </body>
 </html>
+let state = {
+        clicks: 0,
+        frogs: [],
+        unlockedSpecies: new Set(),
+        achievements: []
+    };
+
+    // 1. THIS ADDS THE START FROG
+    function createStarterFrog() {
+        if (state.frogs.length === 0) {
+            const starter = {
+                id: "starter",
+                species: "Green Frog",
+                x: 50, // Center
+                y: 50,
+                hat: 'None',
+                level: 1
+            };
+            state.frogs.push(starter);
+            state.unlockedSpecies.add("Green Frog");
+        }
+    }
+
+    function startGame() {
+        document.getElementById('title-screen').style.display = 'none';
+        document.getElementById('game-screen').style.display = 'block';
+        
+        createStarterFrog(); // Create frog on launch
+        renderWorld();       // Draw it
+        spawnFox();          // Start the fox timer
+    }
+
+    function renderWorld() {
+        const world = document.getElementById('world');
+        world.innerHTML = ''; 
+        
+        state.frogs.forEach(frog => {
+            const el = document.createElement('div');
+            el.className = 'frog-sprite';
+            el.style.left = frog.x + '%';
+            el.style.top = frog.y + '%';
+            
+            // Adding the "Smile/Croak" text bubble visual
+            el.innerHTML = `
+                <div class="frog-body">🐸</div>
+                <div class="croak-bubble" style="display:none; position:absolute; top:-20px; font-size:12px;">Ribbit!</div>
+            `;
+
+            // Hover and Click effects
+            el.onclick = (e) => {
+                handleFrogClick(frog, el);
+            };
+
+            world.appendChild(el);
+        });
+    }
+
+    function handleFrogClick(frog, element) {
+        state.clicks += 1;
+        updateUI();
+
+        // Visual Feedback: Croak Animation
+        const bubble = element.querySelector('.croak-bubble');
+        bubble.style.display = 'block';
+        element.style.transform = 'scale(1.2)';
+        
+        setTimeout(() => {
+            bubble.style.display = 'none';
+            element.style.transform = 'scale(1)';
+        }, 200);
+    }
