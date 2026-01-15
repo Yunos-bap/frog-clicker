@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Frog Clicker: Merge Master</title>
+    <title>Frog Clicker: Hat & Collector Edition</title>
     <style>
-        :root { --grass: #7cfc00; --wood: #5d4037; --ui: rgba(0,0,0,0.92); --machine: #ff4757; }
-        body { margin: 0; padding: 0; font-family: sans-serif; background: #2c3e50; color: white; overflow: hidden; touch-action: none; }
+        :root { --grass: #7cfc00; --wood: #5d4037; --ui: rgba(0,0,0,0.95); --machine: #ff4757; }
+        body { margin: 0; padding: 0; font-family: 'Arial', sans-serif; background: #2c3e50; color: white; overflow: hidden; touch-action: none; }
         #game-screen { position: absolute; width: 100vw; height: 100vh; background: var(--grass); display: block; }
 
-        /* Merge Machine */
         #merge-zone {
             position: absolute; left: 60%; top: 50%; transform: translate(-50%, -50%);
             width: 320px; height: 320px; border: 6px dashed var(--machine); border-radius: 40px;
@@ -23,6 +22,17 @@
             z-index: 10; cursor: pointer; user-select: none;
             transition: transform 0.1s, left 0.4s ease-out, top 0.4s ease-out;
         }
+
+        .hat-overlay {
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 45px;
+            pointer-events: none;
+            z-index: 11;
+        }
+
         .lvl-tag { position: absolute; bottom: 5px; right: 5px; font-size: 16px; background: black; color: gold; padding: 2px 8px; border-radius: 10px; pointer-events: none; }
 
         #sidebar { 
@@ -37,11 +47,11 @@
         
         .section-header { color: #f1c40f; text-transform: uppercase; font-size: 12px; margin: 15px 0 8px 0; border-bottom: 1px solid #444; padding-bottom: 5px; }
         .item { background: #222; padding: 12px; margin-bottom: 8px; border-radius: 8px; border-left: 4px solid #f1c40f; font-size: 14px; cursor: pointer; }
+        .item.remove-btn { border-left-color: #ff4757; color: #ff4757; text-align: center; font-weight: bold; }
         
         .log-entry { padding: 8px; margin-bottom: 4px; border-radius: 4px; background: rgba(255,255,255,0.05); font-size: 14px; }
         .unlocked { color: #2ecc71; font-weight: bold; border-left: 3px solid #2ecc71; }
         .locked { color: #555; font-style: italic; }
-        
         .achievement { background: #1a1a1a; padding: 10px; margin-bottom: 8px; border-radius: 8px; border: 1px solid #444; font-size: 13px; }
         .ach-done { border-color: #2ecc71; background: #0e2b1a; }
         
@@ -91,14 +101,17 @@
     let frogs = [];
     let unlockedFrogs = new Set(['Green Frog']);
     let unlockedHats = new Set();
+    let currentEquippedHat = null;
     let dragging = null;
+    let isMoving = false;
 
     const frogData = [{type:'Green Frog', cost:50}, {type:'Blue Frog', cost:150}, {type:'Red Frog', cost:500}, {type:'Yellow Frog', cost:1500}];
-    const hatData = [{type:'Leaf Hat', cost:20}, {type:'Tiny Crown', cost:100}, {type:'Wizard Hat', cost:500}];
+    const hatData = [{type:'Leaf Hat', cost:20, emoji: '🍃'}, {type:'Tiny Crown', cost:100, emoji: '👑'}, {type:'Wizard Hat', cost:500, emoji: '🧙‍♂️'}];
+
     const achievements = [
         {id:'100clicks', title:'Active Clicker', desc:'Reach 100 total clicks', goal:100, type:'clicks'},
-        {id:'lvl2', title:'Evolution', desc:'Get a Level 2 frog', goal:2, type:'level'},
-        {id:'lvl3', title:'Merge Master', desc:'Get a Level 3 frog', goal:3, type:'level'}
+        {id:'lvl3', title:'Merge Master', desc:'Achieve a Level 3 frog', goal:3, type:'level'},
+        {id:'allhats', title:'Hat Collector', desc:'Unlock all 3 available hats', goal:3, type:'hats'}
     ];
 
     function showTab(tab) {
@@ -110,14 +123,28 @@
     }
 
     function buyFrog(type, cost) {
-        if (clicks >= cost) { clicks -= cost; addFrogToWorld(type, 1); updateUI(); updateLogUI(); }
-        else { alert("You need more clicks!"); }
+        if (clicks >= cost) { clicks -= cost; addFrogToWorld(type, 1); updateUI(); updateLogUI(); } 
+        else { alert("Not enough clicks!"); }
     }
 
-    function buyHat(type, cost) {
-        if (unlockedHats.has(type)) return;
-        if (clicks >= cost) { clicks -= cost; unlockedHats.add(type); updateUI(); updateShopUI(); updateLogUI(); }
-        else { alert("Not enough clicks!"); }
+    function buyHat(type, cost, emoji) {
+        if (unlockedHats.has(type)) {
+            currentEquippedHat = emoji;
+            renderFrogs();
+            return;
+        }
+        if (clicks >= cost) { 
+            clicks -= cost; 
+            unlockedHats.add(type); 
+            currentEquippedHat = emoji;
+            updateUI(); updateShopUI(); updateLogUI(); updateAchUI();
+            renderFrogs();
+        } else { alert("Not enough clicks!"); }
+    }
+
+    function removeHat() {
+        currentEquippedHat = null;
+        renderFrogs();
     }
 
     function addFrogToWorld(type, lvl, x, y) {
@@ -135,21 +162,27 @@
             const div = document.createElement('div');
             div.className = 'frog';
             div.style.left = f.x + 'px'; div.style.top = f.y + 'px';
-            div.innerHTML = `🐸<div class="lvl-tag">Lvl ${f.lvl}</div>`;
+            let hatHTML = currentEquippedHat ? `<div class="hat-overlay">${currentEquippedHat}</div>` : '';
+            div.innerHTML = `${hatHTML}🐸<div class="lvl-tag">Lvl ${f.lvl}</div>`;
 
-            div.addEventListener('touchstart', (e) => { dragging = f; }, {passive: false});
+            div.addEventListener('touchstart', (e) => { dragging = f; isMoving = false; }, {passive: false});
             div.addEventListener('touchmove', (e) => {
                 if (!dragging || dragging.id !== f.id) return;
+                isMoving = true;
                 const t = e.touches[0];
                 f.x = t.clientX - 60; f.y = t.clientY - 60;
                 div.style.left = f.x + 'px'; div.style.top = f.y + 'px';
             }, {passive: false});
-            div.addEventListener('touchend', () => { handleDrop(f); dragging = null; });
+            div.addEventListener('touchend', () => { if (dragging) handleDrop(dragging); dragging = null; });
+            
+            div.addEventListener('mousedown', () => { isMoving = false; });
             div.addEventListener('click', () => { 
-                clicks += f.lvl; 
-                totalClicksEver += f.lvl; 
-                updateUI(); 
-                updateAchUI();
+                if (!isMoving) {
+                    clicks += f.lvl; totalClicksEver += f.lvl; 
+                    updateUI(); updateAchUI();
+                    div.style.transform = 'scale(0.9)';
+                    setTimeout(() => div.style.transform = 'scale(1)', 50);
+                }
             });
             layer.appendChild(div);
         });
@@ -159,62 +192,61 @@
         const zone = document.getElementById('merge-zone').getBoundingClientRect();
         const cx = f1.x + 60; const cy = f1.y + 60;
         const isInside = (cx > zone.left && cx < zone.right && cy > zone.top && cy < zone.bottom);
-        
         let frogsInMachine = frogs.filter(f => f.inMachine && f.id !== f1.id);
-
         if (isInside) {
             if (frogsInMachine.length < 2) {
                 f1.inMachine = true;
-                // Snap to specific slots
                 f1.x = (frogsInMachine.length === 0) ? zone.left + 30 : zone.left + 170;
                 f1.y = zone.top + 100;
-                
-                // Check for merge
                 const partner = frogsInMachine.find(f2 => f2.type === f1.type && f2.lvl === f1.lvl);
                 if (partner) {
                     const type = f1.type; const nextLvl = f1.lvl + 1;
                     frogs = frogs.filter(f => f.id !== f1.id && f.id !== partner.id);
                     addFrogToWorld(type, nextLvl, zone.left + 100, zone.top + 100);
-                    alert("MERGED to Level " + nextLvl + "!");
                 }
-            } else {
-                f1.inMachine = false;
-                f1.x = zone.left - 150; // Kick out
-                alert("Machine Full! Max 2 frogs.");
-            }
-        } else {
-            f1.inMachine = false;
-        }
+            } else { f1.inMachine = false; f1.x = zone.left - 150; }
+        } else { f1.inMachine = false; }
         renderFrogs();
     }
 
     function updateUI() { document.getElementById('count').innerText = Math.floor(clicks); }
 
     function updateShopUI() {
-        const fCont = document.getElementById('shop-frogs'); fCont.innerHTML = '';
-        frogData.forEach(d => {
-            const div = document.createElement('div'); div.className = 'item';
-            div.innerHTML = `<b>${d.type}</b><br>Cost: ${d.cost}`;
-            div.onclick = () => buyFrog(d.type, d.cost); fCont.appendChild(div);
-        });
         const hCont = document.getElementById('shop-hats'); hCont.innerHTML = '';
+        
+        // Add Remove Hat Button
+        if (unlockedHats.size > 0) {
+            const rem = document.createElement('div');
+            rem.className = 'item remove-btn';
+            rem.innerText = 'REMOVE HAT';
+            rem.onclick = removeHat;
+            hCont.appendChild(rem);
+        }
+
         hatData.forEach(d => {
             const div = document.createElement('div'); div.className = 'item';
             const owns = unlockedHats.has(d.type);
-            div.innerHTML = `<b>${d.type}</b><br>${owns ? 'OWNED' : 'Cost: ' + d.cost}`;
-            if(!owns) div.onclick = () => buyHat(d.type, d.cost); hCont.appendChild(div);
+            div.innerHTML = `<b>${d.type}</b><br>${owns ? 'EQUIP' : 'Price: ' + d.cost}`;
+            div.onclick = () => buyHat(d.type, d.cost, d.emoji); hCont.appendChild(div);
+        });
+
+        const fCont = document.getElementById('shop-frogs'); fCont.innerHTML = '';
+        frogData.forEach(d => {
+            const div = document.createElement('div'); div.className = 'item';
+            div.innerHTML = `<b>${d.type}</b><br>Price: ${d.cost}`;
+            div.onclick = () => buyFrog(d.type, d.cost); fCont.appendChild(div);
         });
     }
 
     function updateLogUI() {
-        const fl = document.getElementById('log-frogs'); fl.innerHTML = '';
+        const fl = document.getElementById('log-frogs'); if(!fl) return; fl.innerHTML = '';
         frogData.forEach(d => {
             const div = document.createElement('div');
             const u = unlockedFrogs.has(d.type);
             div.className = 'log-entry ' + (u ? 'unlocked' : 'locked');
             div.innerText = u ? '✓ ' + d.type : '? Unknown Frog'; fl.appendChild(div);
         });
-        const hl = document.getElementById('log-hats'); hl.innerHTML = '';
+        const hl = document.getElementById('log-hats'); if(!hl) return; hl.innerHTML = '';
         hatData.forEach(d => {
             const div = document.createElement('div');
             const u = unlockedHats.has(d.type);
@@ -226,28 +258,27 @@
     function updateAchUI() {
         const al = document.getElementById('ach-list'); if(!al) return; al.innerHTML = '';
         achievements.forEach(a => {
-            let done = (a.type === 'clicks' && totalClicksEver >= a.goal) || (a.type === 'level' && maxLevelReached >= a.goal);
+            let done = false;
+            if (a.type === 'clicks' && totalClicksEver >= a.goal) done = true;
+            if (a.type === 'level' && maxLevelReached >= a.goal) done = true;
+            if (a.type === 'hats' && unlockedHats.size >= a.goal) done = true;
+            
             const div = document.createElement('div');
             div.className = 'achievement ' + (done ? 'ach-done' : '');
             div.innerHTML = `<b>${done ? '✓ ' : ''}${a.title}</b><br>${a.desc}`; al.appendChild(div);
         });
     }
 
-    // Main loop for jumping and boundary checks
     setInterval(() => {
         const zone = document.getElementById('merge-zone').getBoundingClientRect();
         if (!dragging) {
             frogs.forEach(f => {
-                if (f.inMachine) return; // Locked frogs don't jump
-                
+                if (f.inMachine) return; 
                 let nextX = f.x + (Math.random() - 0.5) * 80;
                 let nextY = f.y + (Math.random() - 0.5) * 80;
-
-                // Collision with machine border
                 const buffer = 10;
-                const hitMachine = (nextX + 100 > zone.left - buffer && nextX < zone.right + buffer &&
-                                    nextY + 100 > zone.top - buffer && nextY < zone.bottom + buffer);
-                
+                const hitMachine = (nextX + 120 > zone.left - buffer && nextX < zone.right + buffer &&
+                                    nextY + 120 > zone.top - buffer && nextY < zone.bottom + buffer);
                 if (!hitMachine) {
                     f.x = Math.max(290, Math.min(window.innerWidth - 120, nextX));
                     f.y = Math.max(50, Math.min(window.innerHeight - 120, nextY));
